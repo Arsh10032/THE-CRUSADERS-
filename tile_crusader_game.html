@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tile Crusader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: #2a2a2a;
+            border: 3px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #444;
+            padding-bottom: 15px;
+        }
+
+        .game-header h1 {
+            font-size: 2.5em;
+            color: #ffaa00;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .screen-state {
+            display: none;
+        }
+
+        .screen-state.active {
+            display: block;
+        }
+
+        /* Character Creation Screen */
+        .char-creation {
+            text-align: center;
+        }
+
+        .char-creation h2 {
+            color: #ffaa00;
+            margin-bottom: 20px;
+        }
+
+        .class-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .class-card {
+            background: #3a3a3a;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .class-card:hover {
+            border-color: #ffaa00;
+            background: #444;
+            transform: translateY(-3px);
+        }
+
+        .class-card h3 {
+            color: #ffaa00;
+            margin-bottom: 10px;
+        }
+
+        .class-card p {
+            font-size: 0.9em;
+            color: #aaa;
+            text-align: left;
+        }
+
+        /* Game Screen */
+        .game-screen {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 20px;
+        }
+
+        .game-area {
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+            min-height: 300px;
+        }
+
+        .tile {
+            aspect-ratio: 1;
+            background: #444;
+            border: 1px solid #555;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tile:hover {
+            background: #555;
+            transform: scale(1.05);
+        }
+
+        .tile.player {
+            background: #2a5a9a;
+            border-color: #5a9aff;
+        }
+
+        .tile.monster {
+            background: #5a2a2a;
+            border-color: #ff5a5a;
+        }
+
+        .tile.treasure {
+            background: #5a5a2a;
+            border-color: #ffff5a;
+        }
+
+        .tile.exit {
+            background: #2a5a2a;
+            border-color: #5aff5a;
+        }
+
+        .tile.revealed {
+            background: #333;
+        }
+
+        .combat-log {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px solid #333;
+            color: #aaa;
+        }
+
+        .log-entry.damage {
+            color: #ff6666;
+        }
+
+        .log-entry.heal {
+            color: #66ff66;
+        }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #ffaa00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #ffbb22;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 170, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            background: #3a3a3a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #444;
+            font-size: 0.95em;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #aaa;
+        }
+
+        .stat-value {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .health-bar {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            height: 20px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .health-fill {
+            background: #66ff66;
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Death Screen */
+        .death-screen {
+            text-align: center;
+        }
+
+        .death-screen h2 {
+            color: #ff6666;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .death-stats {
+            background: #3a3a3a;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .death-stats p {
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+
+        .victory-screen {
+            text-align: center;
+        }
+
+        .victory-screen h2 {
+            color: #66ff66;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .victory-reward {
+            background: #3a3a3a;
+            border: 2px solid #ffaa00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .victory-reward p {
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+
+        .combat-dialog {
+            background: #2a2a2a;
+            border: 2px solid #ffaa00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .combat-dialog h3 {
+            color: #ffaa00;
+            margin-bottom: 15px;
+        }
+
+        .combat-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>⚔️ TILE CRUSADER ⚔️</h1>
+            <p>A roguelike dungeon crawler</p>
+        </div>
+
+        <!-- Character Creation Screen -->
+        <div id="charCreationScreen" class="screen-state active">
+            <div class="char-creation">
+                <h2>Choose Your Class</h2>
+                <div class="class-options">
+                    <div class="class-card" onclick="selectClass('knight')">
+                        <h3>🛡️ Knight</h3>
+                        <p><strong>Life:</strong> 9<br><strong>Attack:</strong> 3<br><strong>Defense:</strong> 2<br><strong>Potions:</strong> 2</p>
+                    </div>
+                    <div class="class-card" onclick="selectClass('mage')">
+                        <h3>🔮 Mage</h3>
+                        <p><strong>Life:</strong> 5<br><strong>Attack:</strong> 2<br><strong>Defense:</strong> 4<br><strong>Potions:</strong> 5</p>
+                    </div>
+                    <div class="class-card" onclick="selectClass('thief')">
+                        <h3>🗡️ Thief</h3>
+                        <p><strong>Life:</strong> 7<br><strong>Attack:</strong> 2<br><strong>Defense:</strong> 1<br><strong>Potions:</strong> 2</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="screen-state">
+            <div class="game-screen">
+                <div class="game-area">
+                    <h3 style="margin-bottom: 15px; color: #ffaa00;">Current Crusade</h3>
+                    <div class="map-grid" id="mapGrid"></div>
+                    <div class="combat-log" id="combatLog"></div>
+                    <div class="controls">
+                        <button onclick="movePlayer('up')">↑ Up</button>
+                        <button onclick="movePlayer('down')">↓ Down</button>
+                        <button onclick="movePlayer('left')">← Left</button>
+                        <button onclick="movePlayer('right')">→ Right</button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3 style="color: #ffaa00; margin-bottom: 15px;">Character Stats</h3>
+                    <div class="stat-row">
+                        <span class="stat-label">Class:</span>
+                        <span class="stat-value" id="classDisplay">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Level:</span>
+                        <span class="stat-value" id="levelDisplay">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Health:</span>
+                        <span class="stat-value" id="healthDisplay">-</span>
+                    </div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="healthFill"></div>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Attack:</span>
+                        <span class="stat-value" id="attackDisplay">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Defense:</span>
+                        <span class="stat-value" id="defenseDisplay">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Gold:</span>
+                        <span class="stat-value" id="goldDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Potions:</span>
+                        <span class="stat-value" id="potionsDisplay">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Deaths:</span>
+                        <span class="stat-value" id="deathsDisplay">0</span>
+                    </div>
+                    <button onclick="usePotion()" style="width: 100%; margin-top: 15px;">Use Potion</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Death Screen -->
+        <div id="deathScreen" class="screen-state">
+            <div class="death-screen">
+                <h2>⚰️ YOU DIED ⚰️</h2>
+                <div class="death-stats">
+                    <p><strong>Level Reached:</strong> <span id="deathLevel">-</span></p>
+                    <p><strong>Enemies Defeated:</strong> <span id="deathKills">0</span></p>
+                    <p><strong>Gold Earned:</strong> <span id="deathGold">0</span></p>
+                    <p><strong>Total Deaths:</strong> <span id="totalDeaths">1</span></p>
+                </div>
+                <button onclick="startNewGame()" style="width: 100%; padding: 15px; font-size: 1.1em;">Try Again</button>
+            </div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victoryScreen" class="screen-state">
+            <div class="victory-screen">
+                <h2>🎉 VICTORY! 🎉</h2>
+                <div class="victory-reward">
+                    <p><strong>Crusade Complete!</strong></p>
+                    <p>Gold Earned: <span id="victoryGold" style="color: #ffff66;">0</span></p>
+                    <p>Enemies Defeated: <span id="victoryKills" style="color: #ffaa00;">0</span></p>
+                </div>
+                <button onclick="nextCrusade()" style="width: 100%; padding: 15px; font-size: 1.1em;">Next Crusade</button>
+                <button onclick="startNewGame()" style="width: 100%; padding: 15px; font-size: 1.1em; margin-top: 10px;">Return to Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            currentScreen: 'charCreation',
+            player: null,
+            monsters: [],
+            treasures: [],
+            mapTiles: [],
+            combatLog: [],
+            crusadeNumber: 0,
+            totalDeaths: 0,
+            stats: {
+                totalEnemiesDefeated: 0,
+                totalGoldEarned: 0
+            }
+        };
+
+        const CLASSES = {
+            knight: { life: 9, attack: 3, defense: 2, potions: 2, emoji: '🛡️', name: 'Knight' },
+            mage: { life: 5, attack: 2, defense: 4, potions: 5, emoji: '🔮', name: 'Mage' },
+            thief: { life: 7, attack: 2, defense: 1, potions: 2, emoji: '🗡️', name: 'Thief' }
+        };
+
+        const MONSTERS = [
+            { name: 'Ork', emoji: '🐂', attack: 2, defense: 1, life: 3 },
+            { name: 'Goblin', emoji: '👹', attack: 1, defense: 0, life: 2 },
+            { name: 'Skeleton', emoji: '💀', attack: 2, defense: 1, life: 3 },
+            { name: 'Vampire', emoji: '🧛', attack: 3, defense: 2, life: 4 },
+            { name: 'Imp', emoji: '😈', attack: 1, defense: 1, life: 2 }
+        ];
+
+        function selectClass(className) {
+            const classData = CLASSES[className];
+            gameState.player = {
+                class: className,
+                maxLife: classData.life,
+                life: classData.life,
+                attack: classData.attack,
+                defense: classData.defense,
+                potions: classData.potions,
+                maxPotions: classData.potions,
+                gold: 0,
+                kills: 0,
+                level: 1,
+                x: 3,
+                y: 3
+            };
+            startNewCrusade();
+        }
+
+        function startNewCrusade() {
+            gameState.crusadeNumber++;
+            gameState.player.x = 3;
+            gameState.player.y = 3;
+            gameState.player.life = gameState.player.maxLife;
+            gameState.monsters = [];
+            gameState.treasures = [];
+            gameState.combatLog = [];
+            generateMap();
+            switchScreen('gameScreen');
+            updateDisplay();
+        }
+
+        function generateMap() {
+            const gridSize = 8;
+            gameState.mapTiles = Array(gridSize * gridSize).fill(null);
+            
+            // Place monsters
+            const monsterCount = 2 + gameState.crusadeNumber;
+            for (let i = 0; i < monsterCount; i++) {
+                let x, y, pos;
+                do {
+                    x = Math.floor(Math.random() * gridSize);
+                    y = Math.floor(Math.random() * gridSize);
+                    pos = y * gridSize + x;
+                } while ((x === 3 && y === 3) || gameState.mapTiles[pos]);
+
+                const monsterType = MONSTERS[Math.floor(Math.random() * MONSTERS.length)];
+                const monster = {
+                    ...monsterType,
+                    x, y,
+                    life: monsterType.life
+                };
+                gameState.monsters.push(monster);
+                gameState.mapTiles[pos] = { type: 'monster', index: gameState.monsters.length - 1 };
+            }
+
+            // Place treasures
+            const treasureCount = 2 + Math.floor(gameState.crusadeNumber / 2);
+            for (let i = 0; i < treasureCount; i++) {
+                let x, y, pos;
+                do {
+                    x = Math.floor(Math.random() * gridSize);
+                    y = Math.floor(Math.random() * gridSize);
+                    pos = y * gridSize + x;
+                } while ((x === 3 && y === 3) || gameState.mapTiles[pos]);
+
+                const treasure = {
+                    gold: Math.floor(Math.random() * 50) + 10,
+                    potion: Math.random() > 0.7
+                };
+                gameState.treasures.push(treasure);
+                gameState.mapTiles[pos] = { type: 'treasure', index: gameState.treasures.length - 1 };
+            }
+
+            // Place exit
+            let x, y, pos;
+            do {
+                x = Math.floor(Math.random() * gridSize);
+                y = Math.floor(Math.random() * gridSize);
+                pos = y * gridSize + x;
+            } while ((x === 3 && y === 3) || gameState.mapTiles[pos]);
+            gameState.mapTiles[pos] = { type: 'exit' };
+        }
+
+        function movePlayer(direction) {
+            if (gameState.currentScreen !== 'gameScreen') return;
+
+            const newX = gameState.player.x + (direction === 'left' ? -1 : direction === 'right' ? 1 : 0);
+            const newY = gameState.player.y + (direction === 'up' ? -1 : direction === 'down' ? 1 : 0);
+
+            if (newX < 0 || newX >= 8 || newY < 0 || newY >= 8) return;
+
+            gameState.player.x = newX;
+            gameState.player.y = newY;
+
+            const pos = newY * 8 + newX;
+            const tile = gameState.mapTiles[pos];
+
+            if (tile) {
+                if (tile.type === 'monster') {
+                    startCombat(gameState.monsters[tile.index]);
+                } else if (tile.type === 'treasure') {
+                    collectTreasure(tile.index);
+                    gameState.mapTiles[pos] = null;
+                } else if (tile.type === 'exit') {
+                    winCrusade();
+                }
+            }
+
+            updateDisplay();
+        }
+
+        function startCombat(monster) {
+            let log = `Combat with ${monster.emoji} ${monster.name}!`;
+            addLog(log);
+
+            let playerAttack = gameState.player.attack + Math.floor(Math.random() * 3) - 1;
+            let monsterDefense = monster.defense + Math.floor(Math.random() * 2);
+            let playerDamage = Math.max(1, playerAttack - monsterDefense);
+
+            let monsterAttack = monster.attack + Math.floor(Math.random() * 3) - 1;
+            let playerDefense = gameState.player.defense + Math.floor(Math.random() * 2);
+            let monsterDamage = Math.max(1, monsterAttack - playerDefense);
+
+            addLog(`You deal ${playerDamage} damage!`, 'damage');
+            monster.life -= playerDamage;
+
+            if (monster.life <= 0) {
+                addLog(`${monster.name} defeated!`, 'heal');
+                gameState.player.kills++;
+                gameState.stats.totalEnemiesDefeated++;
+                
+                // Remove monster from map
+                const idx = gameState.monsters.indexOf(monster);
+                const pos = monster.y * 8 + monster.x;
+                gameState.mapTiles[pos] = null;
+                
+                return;
+            }
+
+            addLog(`${monster.name} deals ${monsterDamage} damage!`, 'damage');
+            gameState.player.life -= monsterDamage;
+
+            if (gameState.player.life <= 0) {
+                gameState.player.life = 0;
+                addLog('You have been defeated!', 'damage');
+                setTimeout(() => deathScreen(), 500);
+            }
+        }
+
+        function collectTreasure(treasureIndex) {
+            const treasure = gameState.treasures[treasureIndex];
+            gameState.player.gold += treasure.gold;
+            gameState.stats.totalGoldEarned += treasure.gold;
+            
+            addLog(`Found ${treasure.gold} gold!`, 'heal');
+
+            if (treasure.potion && gameState.player.potions < gameState.player.maxPotions) {
+                gameState.player.potions++;
+                addLog('Found a potion!', 'heal');
+            }
+        }
+
+        function usePotion() {
+            if (gameState.player.potions > 0 && gameState.player.life < gameState.player.maxLife) {
+                gameState.player.potions--;
+                gameState.player.life = Math.min(gameState.player.maxLife, gameState.player.life + 3);
+                addLog('Used a potion!', 'heal');
+                updateDisplay();
+            }
+        }
+
+        function addLog(message, type = 'normal') {
+            gameState.combatLog.push({ message, type });
+            if (gameState.combatLog.length > 8) gameState.combatLog.shift();
+        }
+
+        function winCrusade() {
+            addLog('Escaped the crusade!', 'heal');
+            switchScreen('victoryScreen');
+            document.getElementById('victoryGold').textContent = gameState.player.gold;
+            document.getElementById('victoryKills').textContent = gameState.player.kills;
+        }
+
+        function nextCrusade() {
+            startNewCrusade();
+        }
+
+        function deathScreen() {
+            gameState.totalDeaths++;
+            switchScreen('deathScreen');
+            document.getElementById('deathLevel').textContent = gameState.crusadeNumber;
+            document.getElementById('deathKills').textContent = gameState.player.kills;
+            document.getElementById('deathGold').textContent = gameState.player.gold;
+            document.getElementById('totalDeaths').textContent = gameState.totalDeaths;
+        }
+
+        function startNewGame() {
+            gameState.totalDeaths = 0;
+            gameState.stats = { totalEnemiesDefeated: 0, totalGoldEarned: 0 };
+            switchScreen('charCreation');
+        }
+
+        function switchScreen(screenName) {
+            document.querySelectorAll('.screen-state').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenName).classList.add('active');
+            gameState.currentScreen = screenName;
+        }
+
+        function updateDisplay() {
+            const classData = CLASSES[gameState.player.class];
+            document.getElementById('classDisplay').textContent = classData.name;
+            document.getElementById('levelDisplay').textContent = gameState.player.level;
+            document.getElementById('healthDisplay').textContent = `${gameState.player.life}/${gameState.player.maxLife}`;
+            document.getElementById('healthFill').style.width = `${(gameState.player.life / gameState.player.maxLife) * 100}%`;
+            document.getElementById('healthFill').textContent = gameState.player.life > 0 ? `${gameState.player.life}/${gameState.player.maxLife}` : '';
+            document.getElementById('attackDisplay').textContent = gameState.player.attack;
+            document.getElementById('defenseDisplay').textContent = gameState.player.defense;
+            document.getElementById('goldDisplay').textContent = gameState.player.gold;
+            document.getElementById('potionsDisplay').textContent = gameState.player.potions;
+            document.getElementById('deathsDisplay').textContent = gameState.totalDeaths;
+
+            // Render map
+            const mapGrid = document.getElementById('mapGrid');
+            mapGrid.innerHTML = '';
+            for (let i = 0; i < 64; i++) {
+                const x = i % 8;
+                const y = Math.floor(i / 8);
+                const tile = document.createElement('div');
+                tile.className = 'tile revealed';
+
+                if (x === gameState.player.x && y === gameState.player.y) {
+                    tile.textContent = '🧙';
+                    tile.classList.add('player');
+                } else {
+                    const mapTile = gameState.mapTiles[i];
+                    if (mapTile) {
+                        if (mapTile.type === 'monster') {
+                            const monster = gameState.monsters[mapTile.index];
+                            tile.textContent = monster.emoji;
+                            tile.classList.add('monster');
+                        } else if (mapTile.type === 'treasure') {
+                            tile.textContent = '💰';
+                            tile.classList.add('treasure');
+                        } else if (mapTile.type === 'exit') {
+                            tile.textContent = '🚪';
+                            tile.classList.add('exit');
+                        }
+                    }
+                }
+                mapGrid.appendChild(tile);
+            }
+
+            // Update combat log
+            const combatLog = document.getElementById('combatLog');
+            combatLog.innerHTML = gameState.combatLog.map(log => 
+                `<div class="log-entry ${log.type}">${log.message}</div>`
+            ).join('');
+            combatLog.scrollTop = combatLog.scrollHeight;
+        }
+    </script>
+</body>
+</html>
